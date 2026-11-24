@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="HKD Gold" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230f172a'/%3E%3Ccircle cx='90' cy='90' r='54' fill='%23f59e0b'/%3E%3Ccircle cx='90' cy='90' r='42' fill='none' stroke='%23fef3c7' stroke-width='4'/%3E%3Ctext x='90' y='105' text-anchor='middle' font-family='Arial,sans-serif' font-weight='bold' font-size='44' fill='%230f172a'%3EAu%3C/text%3E%3C/svg%3E" />
+  <title>HKD Gold Monitor &amp; Portfolio Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', 'PingFang HK', 'Microsoft JhengHei', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .gold-gradient {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 65%, #292013 100%);
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased">
+  <!-- Compact Header & Daily Gold Price in HKD -->
+  <header class="gold-gradient text-white shadow-md border-b border-amber-500/20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center shrink-0">
+            <i data-lucide="coins" class="w-5 h-5 text-amber-400"></i>
+          </div>
+          <div>
+            <h1 id="appTitle" class="text-lg sm:text-xl font-bold tracking-tight text-white">HKD Gold Tracker</h1>
+            <p id="appSubtitle" class="text-xs text-slate-300">Daily HKD price, average cost, gain/loss &amp; purchase log</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Language Switcher -->
+          <div class="inline-flex rounded-lg bg-slate-800/90 border border-slate-700 p-0.5 text-xs">
+            <button id="langEnBtn" type="button" class="px-2.5 py-1 rounded-md font-semibold transition cursor-pointer bg-amber-500 text-slate-950">EN</button>
+            <button id="langZhBtn" type="button" class="px-2.5 py-1 rounded-md font-semibold transition cursor-pointer text-slate-300 hover:text-white">繁體中文</button>
+          </div>
+
+          <span id="priceSourceBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-800/90 text-amber-300 border border-amber-500/30">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+            <span id="priceSourceText">BOCHK Ref (2026-11-24)</span>
+          </span>
+
+          <button id="fetchLiveBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 transition cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span id="fetchLiveText">Refresh Live</span>
+          </button>
+
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs text-slate-200 cursor-pointer select-none">
+            <input id="autoRefreshToggle" type="checkbox" class="rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-600" />
+            <span id="autoRefreshLabel">Auto 60s</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Daily HKD Gold Price Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
+        <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl px-3.5 py-2.5">
+          <div id="lblPerGram" class="text-[11px] text-slate-400">Daily Price / Gram</div>
+          <div id="tickerGram" class="text-lg sm:text-xl font-bold text-white mt-0.5 tabular-nums">HK$920.73</div>
+        </div>
+        <div class="bg-slate-900/70 border border-amber-500/40 rounded-xl px-3.5 py-2.5">
+          <div id="lblPerTael" class="text-[11px] text-amber-300/90">Daily Price / HK Tael (37.429g)</div>
+          <div id="tickerTael" class="text-lg sm:text-xl font-bold text-amber-300 mt-0.5 tabular-nums">HK$34,462.08</div>
+        </div>
+        <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl px-3.5 py-2.5">
+          <div id="lblPerOz" class="text-[11px] text-slate-400">Daily Price / Troy Oz</div>
+          <div id="tickerOz" class="text-lg sm:text-xl font-bold text-white mt-0.5 tabular-nums">HK$28,638.00</div>
+        </div>
+        <div class="bg-slate-900/70 border border-slate-700/80 rounded-xl px-3.5 py-2.5">
+          <div id="lblPerMace" class="text-[11px] text-slate-400">Daily Price / Mace (錢)</div>
+          <div id="tickerMace" class="text-lg sm:text-xl font-bold text-white mt-0.5 tabular-nums">HK$3,446.21</div>
+        </div>
+      </div>
+
+      <!-- Compact Manual Override & Alert Bar -->
+      <div class="mt-3 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="lblManualOverride" class="text-slate-400">Update Price:</span>
+          <input id="manualPriceInput" type="number" step="0.01" min="0" placeholder="Price..." class="w-28 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 tabular-nums" />
+          <select id="manualPriceUnit" class="px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-amber-400">
+            <option value="g">HKD / g</option>
+            <option value="tael">HKD / Tael</option>
+            <option value="oz">HKD / Oz</option>
+          </select>
+          <button id="applyManualPriceBtn" type="button" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition cursor-pointer">Apply</button>
+          <button id="presetBochkBtn" type="button" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer">BOCHK</button>
+          <button id="presetSpotBtn" type="button" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition cursor-pointer">XAU/HKD Spot</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <span id="lblBuyAlert" class="text-slate-400">Buy Alert (HKD/g):</span>
+          <input id="targetPriceInput" type="number" step="0.01" min="0" placeholder="900" class="w-20 px-2 py-1 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 tabular-nums" />
+          <button id="setTargetBtn" type="button" class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-medium transition cursor-pointer">Set</button>
+          <span id="targetAlertBadge" class="hidden px-2 py-0.5 rounded-full font-semibold"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Status Toast -->
+  <div id="toastBanner" class="hidden fixed bottom-5 right-5 z-50 max-w-sm px-4 py-3 rounded-xl shadow-xl border text-xs font-medium flex items-center gap-2.5 transition-all"></div>
+
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <!-- 4 Simple Core KPIs: Holdings, Average Cost, Current Value, Gain/Loss -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span id="kpiLblHoldings">Total Gold Owned</span>
+          <i data-lucide="scale" class="w-4 h-4 text-amber-500"></i>
+        </div>
+        <div id="kpiPureGrams" class="text-2xl font-bold text-slate-900 mt-1.5 tabular-nums">0.00 g</div>
+        <div id="kpiWeightAlt" class="text-xs text-slate-500 mt-1 tabular-nums">0.000 taels · 0.000 oz</div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span id="kpiLblAvgCost">My Average Cost</span>
+          <i data-lucide="tag" class="w-4 h-4 text-slate-400"></i>
+        </div>
+        <div id="kpiAvgCostMain" class="text-2xl font-bold text-slate-900 mt-1.5 tabular-nums">HK$0.00 / g</div>
+        <div id="kpiCostBasis" class="text-xs text-slate-500 mt-1 tabular-nums">Total Paid: HK$0.00</div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span id="kpiLblMarketValue">Current Value</span>
+          <i data-lucide="gem" class="w-4 h-4 text-amber-500"></i>
+        </div>
+        <div id="kpiMarketValue" class="text-2xl font-bold text-slate-900 mt-1.5 tabular-nums">HK$0.00</div>
+        <div id="kpiPieceCount" class="text-xs text-slate-500 mt-1">0 purchases recorded</div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-500">
+          <span id="kpiLblPnL">My Gain / Loss</span>
+          <i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i>
+        </div>
+        <div id="kpiPnL" class="text-2xl font-bold text-slate-900 mt-1.5 tabular-nums">HK$0.00</div>
+        <div id="kpiPnLPct" class="text-xs text-slate-500 mt-1 tabular-nums">0.00%</div>
+      </div>
+    </section>
+
+    <!-- Simple Inline Quick-Add Purchase Card -->
+    <section class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 id="quickAddTitle" class="text-base font-bold text-slate-900">Record Latest Purchase</h2>
+          <p id="quickAddSubtitle" class="text-xs text-slate-500">Enter your latest gold piece purchase to update your average cost and gain/loss.</p>
+        </div>
+        <button id="openAddModalBtn" type="button" class="text-xs font-medium text-amber-700 hover:text-amber-800 underline self-start sm:self-auto cursor-pointer">
+          <span id="openDetailedModalText">Detailed form (notes &amp; dealer)</span>
+        </button>
+      </div>
+
+      <form id="quickPurchaseForm" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+        <div class="lg:col-span-2">
+          <label for="qName" id="qLblName" class="block text-xs font-semibold text-slate-700 mb-1">Gold Piece *</label>
+          <input id="qName" type="text" required placeholder="e.g. 1 Tael Gold Bar" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500" />
+        </div>
+
+        <div>
+          <label for="qWeight" id="qLblWeight" class="block text-xs font-semibold text-slate-700 mb-1">Weight *</label>
+          <div class="flex gap-1.5">
+            <input id="qWeight" type="number" step="0.0001" min="0.0001" required placeholder="1" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 tabular-nums" />
+            <select id="qUnit" class="px-2 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-amber-500">
+              <option value="tael">Tael</option>
+              <option value="g">g</option>
+              <option value="oz">Oz</option>
+              <option value="mace">Mace</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="qPurity" id="qLblPurity" class="block text-xs font-semibold text-slate-700 mb-1">Purity</label>
+          <select id="qPurity" class="w-full px-2.5 py-2 rounded-lg border border-slate-300 text-sm bg-white focus:outline-none focus:border-amber-500">
+            <option value="0.9999">999.9 (24K)</option>
+            <option value="0.999">999</option>
+            <option value="0.99">990 (99金)</option>
+            <option value="0.9167">916 (22K)</option>
+            <option value="0.75">750 (18K)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="qCost" id="qLblCost" class="block text-xs font-semibold text-slate-700 mb-1">Total Paid (HKD) *</label>
+          <input id="qCost" type="number" step="0.01" min="0.01" required placeholder="34000" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 tabular-nums" />
+        </div>
+
+        <div>
+          <button type="submit" class="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition cursor-pointer">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span id="qSubmitText">Add Purchase</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Purchase History Ledger -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <h2 id="ledgerTitle" class="text-base font-bold text-slate-900">Purchase History</h2>
+          <p id="ledgerSubtitle" class="text-xs text-slate-500">Saved in your browser. Export CSV anytime for backup.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="searchLedgerInput" type="text" placeholder="Search..." class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:border-amber-500 w-36 sm:w-44" />
+          <select id="filterCategorySelect" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:border-amber-500 bg-white">
+            <option value="ALL">All Categories</option>
+            <option value="Gold Bar">Gold Bar</option>
+            <option value="Gold Coin">Gold Coin</option>
+            <option value="Jewelry / Ornament">Jewelry / Ornament</option>
+            <option value="Paper / Token">Paper / Token</option>
+          </select>
+          <select id="sortLedgerSelect" class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs focus:outline-none focus:border-amber-500 bg-white">
+            <option value="date_desc">Newest First</option>
+            <option value="date_asc">Oldest First</option>
+            <option value="value_desc">Highest Value</option>
+            <option value="pnl_desc">Highest Gain/Loss</option>
+          </select>
+          <button id="exportCsvBtn" type="button" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-xs font-medium text-slate-700 transition cursor-pointer">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span id="exportCsvText">Export</span>
+          </button>
+          <label class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-xs font-medium text-slate-700 transition cursor-pointer">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span id="importCsvText">Import</span>
+            <input id="importCsvInput" type="file" accept=".csv" class="hidden" />
+          </label>
+          <button id="loadSampleBtn" type="button" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-medium transition cursor-pointer">
+            <span id="loadSampleText">Sample</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyLedgerState" class="p-8 text-center">
+        <p id="emptyStateDesc" class="text-xs text-slate-500 max-w-md mx-auto">No gold purchases recorded yet. Use the form above to add your latest purchase, or load a sample portfolio.</p>
+        <div class="mt-3 flex items-center justify-center gap-2">
+          <button id="emptySampleBtn" type="button" class="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition cursor-pointer">Preview Sample Portfolio</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div id="ledgerTableWrapper" class="hidden overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+              <th id="thDatePiece" class="py-3 px-4">Date &amp; Piece</th>
+              <th id="thCatPurity" class="py-3 px-4">Type &amp; Purity</th>
+              <th id="thWeight" class="py-3 px-4 text-right">Pure Weight</th>
+              <th id="thCostPaid" class="py-3 px-4 text-right">Paid (HKD)</th>
+              <th id="thCostPerG" class="py-3 px-4 text-right">Cost / g</th>
+              <th id="thMeltVal" class="py-3 px-4 text-right">Current Value</th>
+              <th id="thPnL" class="py-3 px-4 text-right">Gain / Loss</th>
+              <th id="thActions" class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Collapsible Analytics & HK Reference Feeds -->
+    <details class="bg-white rounded-2xl border border-slate-200 shadow-sm group">
+      <summary class="p-4 sm:p-5 cursor-pointer flex items-center justify-between text-sm font-semibold text-slate-900 select-none">
+        <span id="analyticsToggleTitle">Charts &amp; Hong Kong Gold Reference Feeds</span>
+        <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+      </summary>
+      <div class="px-4 sm:px-5 pb-5 space-y-6 border-t border-slate-100 pt-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2">
+            <h3 id="chartCompTitle" class="text-sm font-semibold text-slate-900 mb-3">Cost Paid vs. Current Value</h3>
+            <div class="relative h-64">
+              <canvas id="comparisonChart"></canvas>
+            </div>
+          </div>
+          <div>
+            <h3 id="chartAllocTitle" class="text-sm font-semibold text-slate-900 mb-3">Holdings by Category (g)</h3>
+            <div class="relative h-64">
+              <canvas id="allocationChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100">
+          <h3 id="refFeedsTitle" class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Hong Kong Gold Price Reference Feeds</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <a href="https://www.bochk.com/whk/rates/preciousMetal/preciousMetalTradingPrices-enquiry.action?lang=en" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 transition flex items-start justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-900">BOCHK Precious Metals</div>
+                <div class="text-slate-500 mt-0.5">0.9999 10g, 0.99 Tael &amp; London Oz</div>
+              </div>
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+            </a>
+            <a href="https://www.hsbc.com.hk/investments/products/gold-services/" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 transition flex items-start justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-900">HSBC Wayfoong Gold</div>
+                <div class="text-slate-500 mt-0.5">Statement gold HKD/mace quotes</div>
+              </div>
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+            </a>
+            <a href="https://www.chowsangsang.com/en/gold-price/" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 transition flex items-start justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-900">Chow Sang Sang HK</div>
+                <div class="text-slate-500 mt-0.5">Daily 999.9 bar &amp; jewelry tael</div>
+              </div>
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+            </a>
+            <a href="https://www.investing.com/currencies/xau-hkd" target="_blank" rel="noopener noreferrer" class="p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/40 transition flex items-start justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-900">Investing.com XAU/HKD</div>
+                <div class="text-slate-500 mt-0.5">24h global spot chart in HKD</div>
+              </div>
+              <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+    </details>
+  </main>
+
+  <!-- Detailed Add / Edit Purchase Modal -->
+  <div id="purchaseModal" class="hidden fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white z-10">
+        <h3 id="modalTitle" class="text-base font-bold text-slate-900">Record Gold Piece Purchase</h3>
+        <button id="closeModalBtn" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="purchaseForm" class="p-6 space-y-4">
+        <input type="hidden" id="editPurchaseId" value="" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label for="pieceName" id="mLblName" class="block text-xs font-semibold text-slate-700 mb-1">Piece Name / Description *</label>
+            <input id="pieceName" type="text" required placeholder="e.g., 1 oz Canadian Maple Leaf" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <div>
+            <label for="pieceCategory" id="mLblCategory" class="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+            <select id="pieceCategory" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 bg-white">
+              <option value="Gold Bar">Gold Bar</option>
+              <option value="Gold Coin">Gold Coin</option>
+              <option value="Jewelry / Ornament">Jewelry / Ornament</option>
+              <option value="Paper / Token">Paper / Token</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="piecePurity" id="mLblPurity" class="block text-xs font-semibold text-slate-700 mb-1">Purity</label>
+            <select id="piecePurity" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 bg-white">
+              <option value="0.9999">999.9 (24K Fine Gold)</option>
+              <option value="0.999">999 (24K)</option>
+              <option value="0.99">990 (HK 99 Gold)</option>
+              <option value="0.9167">916.7 (22K)</option>
+              <option value="0.75">750 (18K)</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="pieceWeight" id="mLblWeight" class="block text-xs font-semibold text-slate-700 mb-1">Weight per Piece *</label>
+            <div class="flex gap-2">
+              <input id="pieceWeight" type="number" step="0.0001" min="0.0001" required placeholder="1" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 tabular-nums" />
+              <select id="pieceUnit" class="px-2.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 bg-white shrink-0">
+                <option value="g">g</option>
+                <option value="tael">HK Tael (兩)</option>
+                <option value="oz">Troy Oz</option>
+                <option value="mace">Mace (錢)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="pieceQty" id="mLblQty" class="block text-xs font-semibold text-slate-700 mb-1">Quantity *</label>
+            <input id="pieceQty" type="number" step="1" min="1" value="1" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 tabular-nums" />
+          </div>
+
+          <div>
+            <label for="pieceCost" id="mLblCost" class="block text-xs font-semibold text-slate-700 mb-1">Total Cost Paid (HKD) *</label>
+            <input id="pieceCost" type="number" step="0.01" min="0.01" required placeholder="e.g. 29500" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500 tabular-nums" />
+          </div>
+
+          <div>
+            <label for="pieceDate" id="mLblDate" class="block text-xs font-semibold text-slate-700 mb-1">Purchase Date *</label>
+            <input id="pieceDate" type="date" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label for="pieceDealer" id="mLblDealer" class="block text-xs font-semibold text-slate-700 mb-1">Dealer / Bank / Store</label>
+            <input id="pieceDealer" type="text" placeholder="e.g., BOCHK, Chow Sang Sang, Kitco HK" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label for="pieceNotes" id="mLblNotes" class="block text-xs font-semibold text-slate-700 mb-1">Notes</label>
+            <input id="pieceNotes" type="text" placeholder="Optional details..." class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-amber-500" />
+          </div>
+        </div>
+
+        <div class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs space-y-1">
+          <div class="flex justify-between">
+            <span id="mPrevPureLbl" class="text-slate-600">Pure Gold Content:</span>
+            <span id="previewPureGrams" class="font-semibold text-slate-900 tabular-nums">0.00 g</span>
+          </div>
+          <div class="flex justify-between">
+            <span id="mPrevMeltLbl" class="text-slate-600">Current Melt Value:</span>
+            <span id="previewMeltValue" class="font-semibold text-slate-900 tabular-nums">HK$0.00</span>
+          </div>
+          <div class="flex justify-between">
+            <span id="mPrevPremLbl" class="text-slate-600">Premium vs. Spot:</span>
+            <span id="previewPremium" class="font-semibold text-slate-900 tabular-nums">—</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button id="cancelModalBtn" type="button" class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-xs font-medium text-slate-700 cursor-pointer">Cancel</button>
+          <button id="saveModalBtn" type="submit" class="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer">Save Purchase</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-sm p-6">
+      <h3 id="delModalTitle" class="text-base font-bold text-slate-900">Remove Purchase Record?</h3>
+      <p id="deleteModalMsg" class="text-xs text-slate-600 mt-1.5">This action cannot be undone unless you have exported a CSV backup.</p>
+      <div class="flex items-center justify-end gap-2.5 mt-5">
+        <button id="cancelDeleteBtn" type="button" class="px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-xs font-medium text-slate-700 cursor-pointer">Cancel</button>
+        <button id="confirmDeleteBtn" type="button" class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const GRAMS_PER_OZ = 31.1034768;
+    const GRAMS_PER_TAEL = 37.429;
+    const GRAMS_PER_MACE = 3.7429;
+    const STORAGE_KEY = 'hkd_gold_portfolio_v1';
+
+    const I18N = {
+      en: {
+        appTitle: 'HKD Gold Tracker',
+        appSubtitle: 'Daily HKD price, average cost, gain/loss & purchase log',
+        fetchLiveText: 'Refresh Live',
+        autoRefreshLabel: 'Auto 60s',
+        lblPerGram: 'Daily Price / Gram',
+        lblPerTael: 'Daily Price / HK Tael (37.429g)',
+        lblPerOz: 'Daily Price / Troy Oz',
+        lblPerMace: 'Daily Price / Mace (錢)',
+        lblManualOverride: 'Update Price:',
+        applyBtn: 'Apply',
+        lblBuyAlert: 'Buy Alert (HKD/g):',
+        setBtn: 'Set',
+        kpiLblHoldings: 'Total Gold Owned',
+        kpiLblAvgCost: 'My Average Cost',
+        kpiLblMarketValue: 'Current Value',
+        kpiLblPnL: 'My Gain / Loss',
+        totalPaidPrefix: 'Total Paid:',
+        purchasesSuffix: 'purchases recorded',
+        purchaseSuffix: 'purchase recorded',
+        quickAddTitle: 'Record Latest Purchase',
+        quickAddSubtitle: 'Enter your latest gold piece purchase to update your average cost and gain/loss.',
+        openDetailedModalText: 'Detailed form (notes & dealer)',
+        qLblName: 'Gold Piece *',
+        qLblWeight: 'Weight *',
+        qLblPurity: 'Purity',
+        qLblCost: 'Total Paid (HKD) *',
+        qSubmitText: 'Add Purchase',
+        ledgerTitle: 'Purchase History',
+        ledgerSubtitle: 'Saved in your browser. Export CSV anytime for backup.',
+        exportCsvText: 'Export',
+        importCsvText: 'Import',
+        loadSampleText: 'Sample',
+        emptyStateDesc: 'No gold purchases recorded yet. Use the form above to add your latest purchase, or load a sample portfolio.',
+        emptySampleBtn: 'Preview Sample Portfolio',
+        thDatePiece: 'Date & Piece',
+        thCatPurity: 'Type & Purity',
+        thWeight: 'Pure Weight',
+        thCostPaid: 'Paid (HKD)',
+        thCostPerG: 'Cost / g',
+        thMeltVal: 'Current Value',
+        thPnL: 'Gain / Loss',
+        thActions: 'Actions',
+        analyticsToggleTitle: 'Charts & Hong Kong Gold Reference Feeds',
+        chartCompTitle: 'Cost Paid vs. Current Value',
+        chartAllocTitle: 'Holdings by Category (g)',
+        refFeedsTitle: 'Hong Kong Gold Price Reference Feeds',
+        modalAddTitle: 'Record Gold Piece Purchase',
+        modalEditTitle: 'Edit Gold Purchase',
+        mLblName: 'Piece Name / Description *',
+        mLblCategory: 'Category',
+        mLblPurity: 'Purity',
+        mLblWeight: 'Weight per Piece *',
+        mLblQty: 'Quantity *',
+        mLblCost: 'Total Cost Paid (HKD) *',
+        mLblDate: 'Purchase Date *',
+        mLblDealer: 'Dealer / Bank / Store',
+        mLblNotes: 'Notes',
+        mPrevPureLbl: 'Pure Gold Content:',
+        mPrevMeltLbl: 'Current Melt Value:',
+        mPrevPremLbl: 'Premium vs. Spot:',
+        cancelBtn: 'Cancel',
+        saveBtn: 'Save Purchase',
+        delModalTitle: 'Remove Purchase Record?',
+        deleteBtn: 'Delete',
+        chartCostLabel: 'Cost Paid (HKD)',
+        chartValLabel: 'Current Value (HKD)',
+        noHoldings: 'No Holdings Yet',
+        catMap: {
+          'Gold Bar': 'Gold Bar',
+          'Gold Coin': 'Gold Coin',
+          'Jewelry / Ornament': 'Jewelry / Ornament',
+          'Paper / Token': 'Paper / Token'
+        },
+        unitMap: { g: 'g', tael: 'HK Tael', oz: 'Oz', mace: 'Mace' },
+        allCats: 'All Categories',
+        sortNewest: 'Newest First',
+        sortOldest: 'Oldest First',
+        sortValue: 'Highest Value',
+        sortPnL: 'Highest Gain/Loss',
+        taelUnit: 'taels',
+        ozUnit: 'oz',
+        fineness: 'fineness'
+      },
+      zh: {
+        appTitle: '香港黃金價格及買入追蹤',
+        appSubtitle: '每日港元金價、平均買入成本、盈虧計算及買入記錄',
+        fetchLiveText: '更新即時金價',
+        autoRefreshLabel: '自動更新 (60秒)',
+        lblPerGram: '每日金價 / 克',
+        lblPerTael: '每日金價 / 香港司馬兩 (37.429克)',
+        lblPerOz: '每日金價 / 金衡盎司',
+        lblPerMace: '每日金價 / 錢',
+        lblManualOverride: '手動更新金價：',
+        applyBtn: '套用',
+        lblBuyAlert: '目標買入價 (HKD/克)：',
+        setBtn: '設定',
+        kpiLblHoldings: '持有純金總重量',
+        kpiLblAvgCost: '我的平均成本',
+        kpiLblMarketValue: '現時市值',
+        kpiLblPnL: '我的總盈虧',
+        totalPaidPrefix: '總買入成本：',
+        purchasesSuffix: '筆買入記錄',
+        purchaseSuffix: '筆買入記錄',
+        quickAddTitle: '輸入最新買入記錄',
+        quickAddSubtitle: '快速輸入最新買入的金粒、金條或金飾，即時更新平均成本與盈虧。',
+        openDetailedModalText: '詳細表格（金行及備註）',
+        qLblName: '黃金項目名稱 *',
+        qLblWeight: '重量 *',
+        qLblPurity: '成色 / 純度',
+        qLblCost: '總買入金額 (HKD) *',
+        qSubmitText: '新增記錄',
+        ledgerTitle: '黃金買入記錄明細',
+        ledgerSubtitle: '資料自動儲存在瀏覽器，可隨時匯出 CSV 備份。',
+        exportCsvText: '匯出 CSV',
+        importCsvText: '匯入 CSV',
+        loadSampleText: '載入範例',
+        emptyStateDesc: '尚未有買入記錄。請在上方輸入您的最新黃金買入，或載入香港範例組合試用。',
+        emptySampleBtn: '預覽範例組合',
+        thDatePiece: '日期及項目',
+        thCatPurity: '類別及成色',
+        thWeight: '純金重量',
+        thCostPaid: '買入金額 (HKD)',
+        thCostPerG: '平均每克成本',
+        thMeltVal: '現時市值',
+        thPnL: '盈虧',
+        thActions: '操作',
+        analyticsToggleTitle: '圖表分析及香港金價參考網站',
+        chartCompTitle: '買入成本 vs 現時市值',
+        chartAllocTitle: '各類別黃金重量分佈 (克)',
+        refFeedsTitle: '香港主要金價參考平台',
+        modalAddTitle: '記錄黃金買入',
+        modalEditTitle: '編輯買入記錄',
+        mLblName: '項目名稱 / 描述 *',
+        mLblCategory: '類別',
+        mLblPurity: '成色 / 純度',
+        mLblWeight: '每件重量 *',
+        mLblQty: '數量 *',
+        mLblCost: '總買入金額 (HKD) *',
+        mLblDate: '買入日期 *',
+        mLblDealer: '金行 / 銀行 / 商戶',
+        mLblNotes: '備註（編號、手工費等）',
+        mPrevPureLbl: '純金含量：',
+        mPrevMeltLbl: '現時市值：',
+        mPrevPremLbl: '溢價 / 買賣差價：',
+        cancelBtn: '取消',
+        saveBtn: '儲存記錄',
+        delModalTitle: '確定刪除此買入記錄？',
+        deleteBtn: '刪除',
+        chartCostLabel: '買入成本 (HKD)',
+        chartValLabel: '現時市值 (HKD)',
+        noHoldings: '暫無持倉',
+        catMap: {
+          'Gold Bar': '金條 / 金粒',
+          'Gold Coin': '金幣',
+          'Jewelry / Ornament': '金飾',
+          'Paper / Token': '紙黃金 / 代幣'
+        },
+        unitMap: { g: '克', tael: '兩', oz: '盎司', mace: '錢' },
+        allCats: '所有類別',
+        sortNewest: '最新日期優先',
+        sortOldest: '最早日期優先',
+        sortValue: '市值最高',
+        sortPnL: '盈虧最高',
+        taelUnit: '兩',
+        ozUnit: '盎司',
+        fineness: '成色'
+      }
+    };
+
+    const DEFAULT_STATE = {
+      lang: 'en',
+      spotPricePerOzHKD: 28638.00,
+      priceSource: 'BOCHK Ref (2026-11-24)',
+      targetBuyPerGramHKD: null,
+      autoRefresh: false,
+      purchases: []
+    };
+
+    let state = loadState();
+    let comparisonChartInstance = null;
+    let allocationChartInstance = null;
+    let autoRefreshTimer = null;
+    let pendingDeleteId = null;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { ...DEFAULT_STATE };
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULT_STATE,
+          ...parsed,
+          lang: parsed.lang === 'zh' ? 'zh' : 'en',
+          purchases: Array.isArray(parsed.purchases) ? parsed.purchases : []
+        };
+      } catch (e) {
+        return { ...DEFAULT_STATE };
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {}
+    }
+
+    function t() {
+      return I18N[state.lang] || I18N.en;
+    }
+
+    function unitToGrams(unit) {
+      if (unit === 'oz') return GRAMS_PER_OZ;
+      if (unit === 'tael') return GRAMS_PER_TAEL;
+      if (unit === 'mace') return GRAMS_PER_MACE;
+      return 1;
+    }
+
+    function spotPerGram() {
+      return state.spotPricePerOzHKD / GRAMS_PER_OZ;
+    }
+
+    function fmtHKD(val) {
+      const sign = val < 0 ? '-' : '';
+      return sign + 'HK$' + Math.abs(val).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtNum(val, dec = 2) {
+      return Number(val).toLocaleString('en-HK', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    }
+
+    function showToast(msg, type = 'info') {
+      const el = document.getElementById('toastBanner');
+      el.className = 'fixed bottom-5 right-5 z-50 max-w-sm px-4 py-3 rounded-xl shadow-xl border text-xs font-medium flex items-center gap-2 transition-all';
+      if (type === 'success') {
+        el.classList.add('bg-emerald-950', 'text-emerald-100', 'border-emerald-700');
+      } else if (type === 'error') {
+        el.classList.add('bg-rose-950', 'text-rose-100', 'border-rose-700');
+      } else {
+        el.classList.add('bg-slate-900', 'text-slate-100', 'border-slate-700');
+      }
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => el.classList.add('hidden'), 3500);
+    }
+
+    function getPureGrams(p) {
+      return (Number(p.weight) || 0) * unitToGrams(p.unit) * (Number(p.purity) || 1) * (Number(p.quantity) || 1);
+    }
+
+    function applyLanguage() {
+      const dict = t();
+      document.documentElement.lang = state.lang === 'zh' ? 'zh-HK' : 'en';
+      const enBtn = document.getElementById('langEnBtn');
+      const zhBtn = document.getElementById('langZhBtn');
+      if (state.lang === 'zh') {
+        zhBtn.className = 'px-2.5 py-1 rounded-md font-semibold transition cursor-pointer bg-amber-500 text-slate-950';
+        enBtn.className = 'px-2.5 py-1 rounded-md font-semibold transition cursor-pointer text-slate-300 hover:text-white';
+      } else {
+        enBtn.className = 'px-2.5 py-1 rounded-md font-semibold transition cursor-pointer bg-amber-500 text-slate-950';
+        zhBtn.className = 'px-2.5 py-1 rounded-md font-semibold transition cursor-pointer text-slate-300 hover:text-white';
+      }
+
+      const textIds = [
+        'appTitle', 'appSubtitle', 'fetchLiveText', 'autoRefreshLabel',
+        'lblPerGram', 'lblPerTael', 'lblPerOz', 'lblPerMace',
+        'lblManualOverride', 'lblBuyAlert', 'kpiLblHoldings', 'kpiLblAvgCost',
+        'kpiLblMarketValue', 'kpiLblPnL', 'quickAddTitle', 'quickAddSubtitle',
+        'openDetailedModalText', 'qLblName', 'qLblWeight', 'qLblPurity',
+        'qLblCost', 'qSubmitText', 'ledgerTitle', 'ledgerSubtitle',
+        'exportCsvText', 'importCsvText', 'loadSampleText', 'emptyStateDesc',
+        'emptySampleBtn', 'thDatePiece', 'thCatPurity', 'thWeight',
+        'thCostPaid', 'thCostPerG', 'thMeltVal', 'thPnL', 'thActions',
+        'analyticsToggleTitle', 'chartCompTitle', 'chartAllocTitle', 'refFeedsTitle',
+        'mLblName', 'mLblCategory', 'mLblPurity', 'mLblWeight', 'mLblQty',
+        'mLblCost', 'mLblDate', 'mLblDealer', 'mLblNotes',
+        'mPrevPureLbl', 'mPrevMeltLbl', 'mPrevPremLbl', 'delModalTitle'
+      ];
+      textIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && dict[id]) el.textContent = dict[id];
+      });
+
+      document.getElementById('applyManualPriceBtn').textContent = dict.applyBtn;
+      document.getElementById('setTargetBtn').textContent = dict.setBtn;
+      document.getElementById('cancelModalBtn').textContent = dict.cancelBtn;
+      document.getElementById('saveModalBtn').textContent = dict.saveBtn;
+      document.getElementById('cancelDeleteBtn').textContent = dict.cancelBtn;
+      document.getElementById('confirmDeleteBtn').textContent = dict.deleteBtn;
+
+      const filterSel = document.getElementById('filterCategorySelect');
+      filterSel.options[0].textContent = dict.allCats;
+      filterSel.options[1].textContent = dict.catMap['Gold Bar'];
+      filterSel.options[2].textContent = dict.catMap['Gold Coin'];
+      filterSel.options[3].textContent = dict.catMap['Jewelry / Ornament'];
+      filterSel.options[4].textContent = dict.catMap['Paper / Token'];
+
+      const sortSel = document.getElementById('sortLedgerSelect');
+      sortSel.options[0].textContent = dict.sortNewest;
+      sortSel.options[1].textContent = dict.sortOldest;
+      sortSel.options[2].textContent = dict.sortValue;
+      sortSel.options[3].textContent = dict.sortPnL;
+    }
+
+    function renderTickers() {
+      const perG = spotPerGram();
+      document.getElementById('tickerGram').textContent = fmtHKD(perG);
+      document.getElementById('tickerTael').textContent = fmtHKD(perG * GRAMS_PER_TAEL);
+      document.getElementById('tickerOz').textContent = fmtHKD(state.spotPricePerOzHKD);
+      document.getElementById('tickerMace').textContent = fmtHKD(perG * GRAMS_PER_MACE);
+      document.getElementById('priceSourceText').textContent = state.priceSource;
+
+      const badge = document.getElementById('targetAlertBadge');
+      const targetInput = document.getElementById('targetPriceInput');
+      if (state.targetBuyPerGramHKD && state.targetBuyPerGramHKD > 0) {
+        if (!targetInput.value) targetInput.value = state.targetBuyPerGramHKD;
+        badge.classList.remove('hidden');
+        if (perG <= state.targetBuyPerGramHKD) {
+          badge.className = 'px-2 py-0.5 rounded-full font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+          badge.textContent = state.lang === 'zh'
+            ? `已達目標價 <= ${fmtHKD(state.targetBuyPerGramHKD)}/g`
+            : `Target Hit! <= ${fmtHKD(state.targetBuyPerGramHKD)}/g`;
+        } else {
+          const diffPct = ((perG - state.targetBuyPerGramHKD) / state.targetBuyPerGramHKD) * 100;
+          badge.className = 'px-2 py-0.5 rounded-full font-semibold bg-slate-800 text-slate-300 border border-slate-700';
+          badge.textContent = state.lang === 'zh'
+            ? `高於目標 ${fmtNum(diffPct, 1)}%`
+            : `${fmtNum(diffPct, 1)}% above target`;
+        }
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function renderKPIs() {
+      const dict = t();
+      const perG = spotPerGram();
+      let totalPureG = 0;
+      let totalCost = 0;
+      state.purchases.forEach(p => {
+        totalPureG += getPureGrams(p);
+        totalCost += Number(p.totalCostHKD) || 0;
+      });
+      const totalMelt = totalPureG * perG;
+      const pnl = totalMelt - totalCost;
+      const pnlPct = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+      const avgPerG = totalPureG > 0 ? totalCost / totalPureG : 0;
+
+      document.getElementById('kpiPureGrams').textContent = `${fmtNum(totalPureG, 2)} g`;
+      document.getElementById('kpiWeightAlt').textContent = `${fmtNum(totalPureG / GRAMS_PER_TAEL, 3)} ${dict.taelUnit} · ${fmtNum(totalPureG / GRAMS_PER_OZ, 3)} ${dict.ozUnit}`;
+      document.getElementById('kpiAvgCostMain').textContent = `${fmtHKD(avgPerG)} / g`;
+      document.getElementById('kpiCostBasis').textContent = `${dict.totalPaidPrefix} ${fmtHKD(totalCost)}`;
+      document.getElementById('kpiMarketValue').textContent = fmtHKD(totalMelt);
+      document.getElementById('kpiPieceCount').textContent = `${state.purchases.length} ${state.purchases.length === 1 ? dict.purchaseSuffix : dict.purchasesSuffix}`;
+
+      const pnlEl = document.getElementById('kpiPnL');
+      const pnlPctEl = document.getElementById('kpiPnLPct');
+      pnlEl.textContent = (pnl > 0 ? '+' : '') + fmtHKD(pnl);
+      pnlEl.className = 'text-2xl font-bold mt-1.5 tabular-nums ' + (pnl > 0 ? 'text-emerald-600' : pnl < 0 ? 'text-rose-600' : 'text-slate-900');
+      pnlPctEl.textContent = `${pnl > 0 ? '+' : ''}${fmtNum(pnlPct, 2)}%`;
+      pnlPctEl.className = 'text-xs mt-1 tabular-nums ' + (pnl > 0 ? 'text-emerald-600' : pnl < 0 ? 'text-rose-600' : 'text-slate-500');
+    }
+
+    function renderCharts() {
+      const dict = t();
+      const perG = spotPerGram();
+      const categories = ['Gold Bar', 'Gold Coin', 'Jewelry / Ornament', 'Paper / Token'];
+      const costByCat = { 'Gold Bar': 0, 'Gold Coin': 0, 'Jewelry / Ornament': 0, 'Paper / Token': 0 };
+      const valByCat = { 'Gold Bar': 0, 'Gold Coin': 0, 'Jewelry / Ornament': 0, 'Paper / Token': 0 };
+      const gramsByCat = { 'Gold Bar': 0, 'Gold Coin': 0, 'Jewelry / Ornament': 0, 'Paper / Token': 0 };
+
+      state.purchases.forEach(p => {
+        const cat = categories.includes(p.category) ? p.category : 'Gold Bar';
+        const g = getPureGrams(p);
+        costByCat[cat] += Number(p.totalCostHKD) || 0;
+        valByCat[cat] += g * perG;
+        gramsByCat[cat] += g;
+      });
+
+      const labels = categories.map(c => dict.catMap[c]);
+      const compCtx = document.getElementById('comparisonChart').getContext('2d');
+      if (comparisonChartInstance) comparisonChartInstance.destroy();
+      comparisonChartInstance = new Chart(compCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: dict.chartCostLabel,
+              data: categories.map(c => Number(costByCat[c].toFixed(2))),
+              backgroundColor: '#64748b',
+              borderRadius: 6
+            },
+            {
+              label: dict.chartValLabel,
+              data: categories.map(c => Number(valByCat[c].toFixed(2))),
+              backgroundColor: '#d97706',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: v => 'HK$' + Number(v).toLocaleString() }
+            }
+          }
+        }
+      });
+
+      const allocCtx = document.getElementById('allocationChart').getContext('2d');
+      if (allocationChartInstance) allocationChartInstance.destroy();
+      const totalG = Object.values(gramsByCat).reduce((a, b) => a + b, 0);
+      allocationChartInstance = new Chart(allocCtx, {
+        type: 'doughnut',
+        data: {
+          labels: totalG > 0 ? labels : [dict.noHoldings],
+          datasets: [{
+            data: totalG > 0 ? categories.map(c => Number(gramsByCat[c].toFixed(3))) : [1],
+            backgroundColor: totalG > 0 ? ['#d97706', '#f59e0b', '#fbbf24', '#334155'] : ['#e2e8f0'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '64%',
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: ctx => totalG > 0 ? `${ctx.label}: ${fmtNum(ctx.parsed, 2)} g` : dict.noHoldings
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderLedger() {
+      const dict = t();
+      const emptyEl = document.getElementById('emptyLedgerState');
+      const tableWrap = document.getElementById('ledgerTableWrapper');
+      const tbody = document.getElementById('ledgerTableBody');
+
+      if (state.purchases.length === 0) {
+        emptyEl.classList.remove('hidden');
+        tableWrap.classList.add('hidden');
+        tbody.innerHTML = '';
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      tableWrap.classList.remove('hidden');
+
+      const search = document.getElementById('searchLedgerInput').value.trim().toLowerCase();
+      const catFilter = document.getElementById('filterCategorySelect').value;
+      const sortMode = document.getElementById('sortLedgerSelect').value;
+      const perG = spotPerGram();
+
+      let filtered = state.purchases.filter(p => {
+        if (catFilter !== 'ALL' && p.category !== catFilter) return false;
+        if (search) {
+          const hay = `${p.name} ${p.dealer || ''} ${p.notes || ''}`.toLowerCase();
+          if (!hay.includes(search)) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => {
+        const valA = getPureGrams(a) * perG;
+        const valB = getPureGrams(b) * perG;
+        const pnlA = valA - (Number(a.totalCostHKD) || 0);
+        const pnlB = valB - (Number(b.totalCostHKD) || 0);
+        if (sortMode === 'date_asc') return (a.date || '').localeCompare(b.date || '');
+        if (sortMode === 'value_desc') return valB - valA;
+        if (sortMode === 'pnl_desc') return pnlB - pnlA;
+        return (b.date || '').localeCompare(a.date || '');
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-xs text-slate-500">No matching purchases.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(p => {
+        const pureG = getPureGrams(p);
+        const cost = Number(p.totalCostHKD) || 0;
+        const costPerG = pureG > 0 ? cost / pureG : 0;
+        const melt = pureG * perG;
+        const pnl = melt - cost;
+        const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0;
+        const pnlColor = pnl > 0 ? 'text-emerald-600' : pnl < 0 ? 'text-rose-600' : 'text-slate-600';
+        const purityLabel = (Number(p.purity) * 1000).toFixed(1).replace(/\.0$/, '');
+        const unitLabel = dict.unitMap[p.unit] || p.unit;
+        const catLabel = dict.catMap[p.category] || p.category;
+
+        return `
+          <tr class="hover:bg-slate-50/80 transition">
+            <td class="py-3 px-4">
+              <div class="font-semibold text-slate-900">${escapeHtml(p.name)}</div>
+              <div class="text-xs text-slate-500">${escapeHtml(p.date || '')}${p.dealer ? ' · ' + escapeHtml(p.dealer) : ''}${p.quantity > 1 ? ' · ×' + p.quantity : ''}</div>
+            </td>
+            <td class="py-3 px-4">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">${escapeHtml(catLabel)}</span>
+              <div class="text-xs text-slate-500 mt-0.5">${purityLabel} ${dict.fineness}</div>
+            </td>
+            <td class="py-3 px-4 text-right tabular-nums">
+              <div class="font-medium text-slate-900">${fmtNum(pureG, 2)} g</div>
+              <div class="text-xs text-slate-500">${p.quantity} × ${p.weight} ${escapeHtml(unitLabel)}</div>
+            </td>
+            <td class="py-3 px-4 text-right font-medium text-slate-900 tabular-nums">${fmtHKD(cost)}</td>
+            <td class="py-3 px-4 text-right text-slate-600 tabular-nums">${fmtHKD(costPerG)}/g</td>
+            <td class="py-3 px-4 text-right font-medium text-slate-900 tabular-nums">${fmtHKD(melt)}</td>
+            <td class="py-3 px-4 text-right tabular-nums ${pnlColor}">
+              <div class="font-semibold">${pnl > 0 ? '+' : ''}${fmtHKD(pnl)}</div>
+              <div class="text-xs">${pnl > 0 ? '+' : ''}${fmtNum(pnlPct, 1)}%</div>
+            </td>
+            <td class="py-3 px-4 text-right">
+              <div class="inline-flex items-center gap-1">
+                <button type="button" data-action="edit" data-id="${escapeHtml(p.id)}" class="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer" title="Edit">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button type="button" data-action="delete" data-id="${escapeHtml(p.id)}" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 cursor-pointer" title="Delete">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderAll() {
+      applyLanguage();
+      renderTickers();
+      renderKPIs();
+      renderCharts();
+      renderLedger();
+    }
+
+    async function fetchLiveHKDGold() {
+      const btn = document.getElementById('fetchLiveBtn');
+      btn.disabled = true;
+      btn.classList.add('opacity-70');
+      try {
+        const [goldRes, fxRes] = await Promise.all([
+          fetch('https://api.gold-api.com/price/XAU'),
+          fetch('https://open.er-api.com/v6/latest/USD')
+        ]);
+        if (!goldRes.ok || !fxRes.ok) throw new Error('API unavailable');
+        const goldData = await goldRes.json();
+        const fxData = await fxRes.json();
+        const usdPerOz = Number(goldData.price);
+        const hkdPerUsd = Number(fxData?.rates?.HKD);
+        if (!usdPerOz || !hkdPerUsd) throw new Error('Invalid quote data');
+
+        state.spotPricePerOzHKD = Number((usdPerOz * hkdPerUsd).toFixed(2));
+        const now = new Date();
+        const hhmm = now.toTimeString().slice(0, 5);
+        state.priceSource = state.lang === 'zh' ? `即時金價 (${hhmm})` : `Live Spot (${hhmm})`;
+        saveState();
+        renderAll();
+        showToast(state.lang === 'zh' ? `已更新即時金價：${fmtHKD(spotPerGram())}/克` : `Updated live HKD gold price: ${fmtHKD(spotPerGram())}/g`, 'success');
+      } catch (err) {
+        showToast(state.lang === 'zh' ? '暫時無法連接即時金價，請手動輸入或使用預設參考價。' : 'Live feed unreachable right now. Use manual override or reference presets.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70');
+      }
+    }
+
+    function updateFormPreview() {
+      const weight = parseFloat(document.getElementById('pieceWeight').value) || 0;
+      const unit = document.getElementById('pieceUnit').value;
+      const purity = parseFloat(document.getElementById('piecePurity').value) || 1;
+      const qty = parseInt(document.getElementById('pieceQty').value, 10) || 1;
+      const cost = parseFloat(document.getElementById('pieceCost').value) || 0;
+
+      const pureG = weight * unitToGrams(unit) * purity * qty;
+      const melt = pureG * spotPerGram();
+      document.getElementById('previewPureGrams').textContent = `${fmtNum(pureG, 3)} g (${fmtNum(pureG / GRAMS_PER_TAEL, 3)} ${t().taelUnit})`;
+      document.getElementById('previewMeltValue').textContent = fmtHKD(melt);
+      if (melt > 0 && cost > 0) {
+        const premPct = ((cost - melt) / melt) * 100;
+        document.getElementById('previewPremium').textContent = `${premPct >= 0 ? '+' : ''}${fmtNum(premPct, 2)}% (${fmtHKD(cost - melt)})`;
+      } else {
+        document.getElementById('previewPremium').textContent = '—';
+      }
+    }
+
+    function openPurchaseModal(purchase = null) {
+      const modal = document.getElementById('purchaseModal');
+      const dict = t();
+      document.getElementById('modalTitle').textContent = purchase ? dict.modalEditTitle : dict.modalAddTitle;
+      document.getElementById('editPurchaseId').value = purchase ? purchase.id : '';
+      document.getElementById('pieceName').value = purchase ? purchase.name : '';
+      document.getElementById('pieceCategory').value = purchase ? purchase.category : 'Gold Bar';
+      document.getElementById('piecePurity').value = purchase ? String(purchase.purity) : '0.9999';
+      document.getElementById('pieceWeight').value = purchase ? purchase.weight : '';
+      document.getElementById('pieceUnit').value = purchase ? purchase.unit : 'tael';
+      document.getElementById('pieceQty').value = purchase ? purchase.quantity : 1;
+      document.getElementById('pieceCost').value = purchase ? purchase.totalCostHKD : '';
+      document.getElementById('pieceDate').value = purchase ? purchase.date : new Date().toISOString().slice(0, 10);
+      document.getElementById('pieceDealer').value = purchase ? (purchase.dealer || '') : '';
+      document.getElementById('pieceNotes').value = purchase ? (purchase.notes || '') : '';
+      updateFormPreview();
+      modal.classList.remove('hidden');
+    }
+
+    function closePurchaseModal() {
+      document.getElementById('purchaseModal').classList.add('hidden');
+    }
+
+    function loadSamplePortfolio() {
+      state.purchases = [
+        {
+          id: 'sample-1',
+          name: state.lang === 'zh' ? '1兩 999.9 足金金條' : '1 Tael 999.9 Gold Bar',
+          category: 'Gold Bar',
+          purity: 0.9999,
+          weight: 1,
+          unit: 'tael',
+          quantity: 1,
+          totalCostHKD: 33200,
+          date: '2026-09-15',
+          dealer: 'Chow Sang Sang',
+          notes: 'Serial #HK-88412'
+        },
+        {
+          id: 'sample-2',
+          name: state.lang === 'zh' ? '1盎司加拿大楓葉金幣' : '1 oz Canadian Gold Maple Leaf',
+          category: 'Gold Coin',
+          purity: 0.9999,
+          weight: 1,
+          unit: 'oz',
+          quantity: 1,
+          totalCostHKD: 28950,
+          date: '2026-10-10',
+          dealer: 'Kitco HK',
+          notes: 'Sealed assay'
+        },
+        {
+          id: 'sample-3',
+          name: state.lang === 'zh' ? '中銀香港 10克 9999金條' : '10g BOCHK 9999 Bullion',
+          category: 'Gold Bar',
+          purity: 0.9999,
+          weight: 10,
+          unit: 'g',
+          quantity: 2,
+          totalCostHKD: 18120,
+          date: '2026-11-05',
+          dealer: 'BOCHK',
+          notes: '2 x 10g bars'
+        }
+      ];
+      saveState();
+      renderAll();
+      showToast(state.lang === 'zh' ? '已載入 3 筆香港黃金範例記錄。' : 'Loaded 3 sample Hong Kong gold purchases.', 'success');
+    }
+
+    function exportCSV() {
+      if (state.purchases.length === 0) {
+        showToast(state.lang === 'zh' ? '尚無記錄可匯出。' : 'No purchases to export yet.', 'error');
+        return;
+      }
+      const headers = ['id', 'date', 'name', 'category', 'purity', 'weight', 'unit', 'quantity', 'totalCostHKD', 'dealer', 'notes'];
+      const rows = state.purchases.map(p => headers.map(h => `"${String(p[h] ?? '').replace(/"/g, '""')}"`).join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `hkd_gold_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(state.lang === 'zh' ? '已匯出 CSV 檔案。' : 'Exported gold ledger CSV.', 'success');
+    }
+
+    function handleImportCSV(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const lines = ev.target.result.split(/\r?\n/).filter(Boolean);
+          if (lines.length < 2) throw new Error('Empty CSV');
+          const imported = [];
+          for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].match(/("([^"]|"")*"|[^,]*)/g).filter((_, idx) => idx % 2 === 0).map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+            if (cols.length >= 9 && cols[2]) {
+              imported.push({
+                id: cols[0] || ('imp-' + Date.now() + '-' + i),
+                date: cols[1] || new Date().toISOString().slice(0, 10),
+                name: cols[2],
+                category: cols[3] || 'Gold Bar',
+                purity: parseFloat(cols[4]) || 0.9999,
+                weight: parseFloat(cols[5]) || 1,
+                unit: cols[6] || 'g',
+                quantity: parseInt(cols[7], 10) || 1,
+                totalCostHKD: parseFloat(cols[8]) || 0,
+                dealer: cols[9] || '',
+                notes: cols[10] || ''
+              });
+            }
+          }
+          if (imported.length === 0) throw new Error('No valid rows');
+          state.purchases = [...imported, ...state.purchases];
+          saveState();
+          renderAll();
+          showToast(state.lang === 'zh' ? `已匯入 ${imported.length} 筆記錄。` : `Imported ${imported.length} gold purchase(s).`, 'success');
+        } catch (err) {
+          showToast(state.lang === 'zh' ? '無法讀取 CSV 格式。' : 'Could not parse CSV.', 'error');
+        }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    // Event Listeners
+    document.getElementById('langEnBtn').addEventListener('click', () => {
+      state.lang = 'en';
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('langZhBtn').addEventListener('click', () => {
+      state.lang = 'zh';
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('fetchLiveBtn').addEventListener('click', fetchLiveHKDGold);
+
+    document.getElementById('autoRefreshToggle').addEventListener('change', e => {
+      state.autoRefresh = e.target.checked;
+      saveState();
+      clearInterval(autoRefreshTimer);
+      if (state.autoRefresh) {
+        fetchLiveHKDGold();
+        autoRefreshTimer = setInterval(fetchLiveHKDGold, 60000);
+        showToast(state.lang === 'zh' ? '已開啟每 60 秒自動更新。' : 'Auto-refresh enabled (every 60s).', 'info');
+      } else {
+        showToast(state.lang === 'zh' ? '已暫停自動更新。' : 'Auto-refresh paused.', 'info');
+      }
+    });
+
+    document.getElementById('applyManualPriceBtn').addEventListener('click', () => {
+      const val = parseFloat(document.getElementById('manualPriceInput').value);
+      const unit = document.getElementById('manualPriceUnit').value;
+      if (!val || val <= 0) {
+        showToast(state.lang === 'zh' ? '請輸入有效的正數金額。' : 'Enter a valid positive HKD price.', 'error');
+        return;
+      }
+      const perG = val / unitToGrams(unit);
+      state.spotPricePerOzHKD = Number((perG * GRAMS_PER_OZ).toFixed(2));
+      state.priceSource = state.lang === 'zh' ? '手動設定' : 'Manual Override';
+      saveState();
+      renderAll();
+      showToast(state.lang === 'zh' ? `金價已更新為 ${fmtHKD(perG)}/克` : `Price updated to ${fmtHKD(perG)}/g.`, 'success');
+    });
+
+    document.getElementById('presetBochkBtn').addEventListener('click', () => {
+      state.spotPricePerOzHKD = 28638.00;
+      state.priceSource = 'BOCHK Ref (2026-11-24)';
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('presetSpotBtn').addEventListener('click', () => {
+      state.spotPricePerOzHKD = 27728.10;
+      state.priceSource = 'XAU/HKD Spot (2026-11-24)';
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('setTargetBtn').addEventListener('click', () => {
+      const val = parseFloat(document.getElementById('targetPriceInput').value);
+      state.targetBuyPerGramHKD = val > 0 ? val : null;
+      saveState();
+      renderTickers();
+      showToast(state.targetBuyPerGramHKD
+        ? (state.lang === 'zh' ? `已設定目標買入價 ${fmtHKD(val)}/克` : `Buy alert set at ${fmtHKD(val)}/g.`)
+        : (state.lang === 'zh' ? '已清除目標價提醒。' : 'Buy alert cleared.'), 'info');
+    });
+
+    document.getElementById('quickPurchaseForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const item = {
+        id: 'gp-' + Date.now(),
+        name: document.getElementById('qName').value.trim(),
+        category: 'Gold Bar',
+        purity: parseFloat(document.getElementById('qPurity').value),
+        weight: parseFloat(document.getElementById('qWeight').value),
+        unit: document.getElementById('qUnit').value,
+        quantity: 1,
+        totalCostHKD: parseFloat(document.getElementById('qCost').value),
+        date: new Date().toISOString().slice(0, 10),
+        dealer: '',
+        notes: ''
+      };
+      state.purchases.unshift(item);
+      saveState();
+      e.target.reset();
+      renderAll();
+      showToast(state.lang === 'zh' ? '已新增最新黃金買入記錄。' : 'Added latest gold purchase.', 'success');
+    });
+
+    document.getElementById('openAddModalBtn').addEventListener('click', () => openPurchaseModal(null));
+    document.getElementById('closeModalBtn').addEventListener('click', closePurchaseModal);
+    document.getElementById('cancelModalBtn').addEventListener('click', closePurchaseModal);
+    document.getElementById('loadSampleBtn').addEventListener('click', loadSamplePortfolio);
+    document.getElementById('emptySampleBtn').addEventListener('click', loadSamplePortfolio);
+    document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+    document.getElementById('importCsvInput').addEventListener('change', handleImportCSV);
+
+    ['pieceWeight', 'pieceUnit', 'piecePurity', 'pieceQty', 'pieceCost'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updateFormPreview);
+      document.getElementById(id).addEventListener('change', updateFormPreview);
+    });
+
+    document.getElementById('purchaseForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const editId = document.getElementById('editPurchaseId').value;
+      const item = {
+        id: editId || ('gp-' + Date.now()),
+        name: document.getElementById('pieceName').value.trim(),
+        category: document.getElementById('pieceCategory').value,
+        purity: parseFloat(document.getElementById('piecePurity').value),
+        weight: parseFloat(document.getElementById('pieceWeight').value),
+        unit: document.getElementById('pieceUnit').value,
+        quantity: parseInt(document.getElementById('pieceQty').value, 10) || 1,
+        totalCostHKD: parseFloat(document.getElementById('pieceCost').value),
+        date: document.getElementById('pieceDate').value,
+        dealer: document.getElementById('pieceDealer').value.trim(),
+        notes: document.getElementById('pieceNotes').value.trim()
+      };
+
+      if (editId) {
+        const idx = state.purchases.findIndex(p => p.id === editId);
+        if (idx !== -1) state.purchases[idx] = item;
+        showToast(state.lang === 'zh' ? '已更新買入記錄。' : 'Updated purchase record.', 'success');
+      } else {
+        state.purchases.unshift(item);
+        showToast(state.lang === 'zh' ? '已記錄黃金買入。' : 'Recorded new gold purchase.', 'success');
+      }
+      saveState();
+      closePurchaseModal();
+      renderAll();
+    });
+
+    document.getElementById('ledgerTableBody').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      if (action === 'edit') {
+        const found = state.purchases.find(p => p.id === id);
+        if (found) openPurchaseModal(found);
+      } else if (action === 'delete') {
+        pendingDeleteId = id;
+        const found = state.purchases.find(p => p.id === id);
+        document.getElementById('deleteModalMsg').textContent = found
+          ? (state.lang === 'zh' ? `確定刪除「${found.name}」(${fmtHKD(found.totalCostHKD)})？` : `Remove "${found.name}" (${fmtHKD(found.totalCostHKD)}) from your ledger?`)
+          : (state.lang === 'zh' ? '確定刪除此記錄？' : 'Remove this purchase record?');
+        document.getElementById('deleteModal').classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+      if (pendingDeleteId) {
+        state.purchases = state.purchases.filter(p => p.id !== pendingDeleteId);
+        saveState();
+        renderAll();
+        showToast(state.lang === 'zh' ? '已刪除記錄。' : 'Purchase removed.', 'info');
+      }
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    });
+
+    ['searchLedgerInput', 'filterCategorySelect', 'sortLedgerSelect'].forEach(id => {
+      document.getElementById(id).addEventListener('input', renderLedger);
+      document.getElementById(id).addEventListener('change', renderLedger);
+    });
+
+    // Initialize
+    document.getElementById('autoRefreshToggle').checked = Boolean(state.autoRefresh);
+    if (state.autoRefresh) {
+      autoRefreshTimer = setInterval(fetchLiveHKDGold, 60000);
+    }
+    renderAll();
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
